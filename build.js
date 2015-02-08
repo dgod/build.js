@@ -24,7 +24,7 @@ function _pop(){
 function _extract(s){
 	var begin=-1,end=-1;
 	var rec=0;
-	for(var i=0;i<s.length-1;i++){
+	for(var i=0;i<s.length;i++){
 		if(s[i]=='$' && s[i+1]=='('){
 			begin=i;
 			rec++;
@@ -33,7 +33,7 @@ function _extract(s){
 			rec--;
 			if(rec==0){
 				var res={begin:begin,end:end};
-				res.name=s.substring(begin,end);
+				res.name=s.substring(begin+2,end-1);
 				return res;
 			}
 		}
@@ -172,14 +172,28 @@ function env(name,op,val){
 	} else if(op=='?='){
 		if(_env[name])
 			return;
-		_env[name]=resolv(val);
+		_env[name]=_resolv(val);
 	} else if(op==':='){
-		_env[name]=resolv(val);
+		_env[name]=_resolv(val);
 	} else if(op=='+='){
 		if(!_env[name])
 			_env[name]=val;
 		else
 			_env[name]+=' '+val;
+	} else if(!op){
+		var i=name.indexOf('=');
+		if(i<=0)
+			return;
+		val=name.substring(i+1);
+		i--;
+		if(name[i]=='?' || name[i]==':' || name[i]=='+')
+			op=name.substr(i,2);
+		else{
+			op='=';
+			i++;
+		}
+		name=name.substr(0,i);
+		env(name,op,val);
 	}
 }
 
@@ -190,18 +204,6 @@ function $(name){
 	var res=_resolv(_env[name]);
 	_recursive[name]=false;
 	return res;
-}
-
-function cflags(op,val){
-	env('CFLAGS',op,val);
-}
-
-function ldflags(op,val){
-	env('LDFLAGS',op,val);
-}
-
-function libs(op,val){
-	env('LIBS',op,val);
 }
 
 function cc(input,output){
@@ -228,6 +230,7 @@ function cc(input,output){
 }
 
 function ld(input,output){
+	output=_resolv(output);
 	if(util.isArray(input)){
 		if(!_deps_changed(input,output))
 			return;
@@ -309,6 +312,19 @@ function rmdir(path){
 	}
 }
 
+function dir(path,filter){
+	var temp=fs.readdirSync(path);
+	if(!filter)
+		return temp;
+	var res=[];
+	for(var i=0;i<temp.length;i++){
+		if(temp[i].match(filter)){
+			res.push(temp[i]);
+		}
+	}
+	return res;
+}
+
 function wildcard(input,change){
 	var output=[];
 	if(typeof(change)=="function"){
@@ -321,6 +337,10 @@ function wildcard(input,change){
 		}
 	}
 	return output;
+}
+
+function cd(path){
+	process.chdir(path);
 }
 
 function _run(){
