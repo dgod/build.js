@@ -1,19 +1,20 @@
 var fs=require('fs');
 var util=require('util');
 var child_process=require('child_process');
+var path=require('path');
 
 var _env={};
 var _recursive={};
 var _sandbox=[];
 
-function _push(){
+function push(){
 	var it={};
 	it.env=JSON.stringify(_env);
 	it.cwd=process.cwd();
 	_sandbox.push(it);
 }
 
-function _pop(){
+function pop(){
 	if(_sandbox.length==0)
 		return;
 	var it=_sandbox.pop();
@@ -78,7 +79,19 @@ function _deps_get(file,vpath,includes,deps,check){
 	if(check[file])
 		return;
 	check[file]=true;
-	var text=fs.readFileSync(file,{"encoding":"utf-8"});
+	if(file.indexOf('/')>=0 || fs.existsSync(file)) {
+		var text=fs.readFileSync(file,{"encoding":"utf-8"});
+	} else {
+		for(var j=0;j<vpath.length;j++){
+			var path=vpath[j]+'/'+file;
+			if(fs.existsSync(path)){
+				var text=fs.readFileSync(file,{"encoding":"utf-8"});
+				break;
+			}
+		}
+		if(j==vpath.length)
+			return;
+	}
 	var list=text.split('\n');
 	for(var i=0;i<list.length;i++){
 		var s=list[i];
@@ -130,6 +143,43 @@ function _deps_get(file,vpath,includes,deps,check){
 }
 function _cfile(file){
 	return file.match(/\x2E[ch]$/);
+}
+
+function _vpath_fill_single(file,vpath){
+	if(file.indexOf('/')>=0 || fs.existsSync(file))
+		return file;
+	for(var j=0;j<vpath.length;j++){
+		var path=vpath[j]+'/'+file;
+		if(fs.existsSync(path)){
+			return path;
+		}
+	}
+	return file;
+}
+
+function _vpath_fill(input,vpath){
+	if(!vpath || vpath.length<=0)
+		return input;
+	if(typeof(input)=="string")
+		return _vpath_fill_single(input,vpath);
+	var res=[];
+	for(var i=0;i<input.length;i++){
+		var file=input[i];
+		if(file.indexOf('/')>=0){
+			res.push(file);
+			continue;
+		}
+		for(var j=0;j<vpath.length;j++){
+			var path=vpath[j]+'/'+file;
+			if(fs.existsSync(path)){
+				res.push(path);
+				break;
+			}
+		}
+		if(j==vpath.length)
+			res.push(file);
+	}
+	return res;
 }
 
 function _deps_changed(input,output){
@@ -223,6 +273,8 @@ function cc(input,output){
 	if(_cc.length==0) _cc='gcc';
 	if(!output)
 		output=input.replace('.c','.o');
+	var vpath=$('VPATH').split(' ');
+	input=_vpath_fill(input,vpath);
 	if(!_deps_changed(input,output))
 		return;
 	var cmd=_cc+' '+$('CFLAGS')+' -c '+input+' -o '+output;
@@ -246,24 +298,47 @@ function ld(input,output){
 	exec(cmd);
 }
 
+function cr(input,output,pattern){
+	var vpath=$('VPATH').split(' ');
+	input=_vpath_fill(input,vpath);
+	if(util.isArray(output)) {
+		if(!util.isArray(input)) {
+			input=[input];
+		}
+		for(var i=0;i<input.length;i++){
+			if(!_deps_changed(input[i],output[i]))
+				continue;
+			var cmd=pattern.replace('$^',input[i]).replace('$@',output[i]);
+			exec(cmd);
+		}
+	} else {
+		if(!_deps_changed(input,output))
+			return;
+		if(util.isArray(input))
+			input=input.join(' ');
+		var cmd=pattern.replace('$^',input).replace('$@',output);
+		exec(cmd);
+	}
+}
+
 function include(_file){
 	var _code=fs.readFileSync(_file,{"encoding":"utf-8"});
 	eval(_code);
 }
 
-function make(_path,_file,target){
-	_push();
+function build(_path,_file,target){
+	push();
 	if(_path)
-		process.chdir(_path);
+		cd(_path);
 	if(!_file)
 		_file="build.txt";
 	var _code=fs.readFileSync(_file,{"encoding":"utf-8"});
 	eval(_code);
-	_pop();
+	pop();
 }
 
 function shell(command){
-	return child_process.execSync(_resolv(command),{"encoding":"utf-8"});
+	return child_process.execSync(_resolv(command),{"encoding":"utf-8"}).replace(/\n$/,'');
 }
 
 function exec(command){
@@ -316,6 +391,10 @@ function dir(path,filter){
 	var temp=fs.readdirSync(path);
 	if(!filter)
 		return temp;
+	if(filter=='*.c')
+		filter=/.c$/;
+	else if(filter=='*.o')
+		filter=/.o$/;
 	var res=[];
 	for(var i=0;i<temp.length;i++){
 		if(temp[i].match(filter)){
@@ -333,6 +412,7 @@ function wildcard(input,change){
 		}
 	} else {
 		for(var i=0;i<input.length;i++){
+			if(change[0]==".c") change[0]=/.c$/;
 			output.push(input[i].replace(change[0],change[1]));
 		}
 	}
@@ -346,7 +426,7 @@ function cd(path){
 function _run(){
 	var argv=process.argv;
 	var i=1;
-	if(argv[1].indexOf("build.js")>=0)
+	if(argv[1].indexOf("build")>=0)
 		i++;
 	var path;
 	var file;
@@ -363,13 +443,14 @@ function _run(){
 		} else if(argv[i].indexOf('=')>0) {
 			var t=argv[i].split('=',2);
 			env(t[0],'=',t[1]);
+			continue;
 		}
-		make(path,file,argv[i]);
+		build(path,file,argv[i]);
 		file=undefined;
 		task++;
 	}
 	if(task==0)
-		make(path,file);
+		build(path,file);
 }
 
 _run();

@@ -1,10 +1,15 @@
-nodejs base c build system.
+nodejs based c build system.
 
 example:
 
-var SRCS=dir('.',/.c$/);
+var SRCS=dir('.','*.c');
 var OBJS=wildcard(SRCS,[/.c$/,'.o']);
 var TARGET='a.out';
 
-cc(SRCS,OBJS);
-ld(OBJS,TARGET);
+if(target=="clean"){
+	rm(TARGET);
+	rm(OBJS);
+} else {
+	cc(SRCS,OBJS);
+	ld(OBJS,TARGET);
+}
