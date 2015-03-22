@@ -332,7 +332,12 @@ function build(_path,_file,target){
 		cd(_path);
 	if(!_file)
 		_file="build.txt";
-	var _code=fs.readFileSync(_file,{"encoding":"utf-8"});
+	try{
+		var _code=fs.readFileSync(_file,{"encoding":"utf-8"});
+	} catch(e) {
+		console.error("no such file '"+e.path+"'");
+		process.exit(-1);
+	}
 	eval(_code);
 	pop();
 }
