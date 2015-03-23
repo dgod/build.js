@@ -2,10 +2,25 @@ var fs=require('fs');
 var util=require('util');
 var child_process=require('child_process');
 var path=require('path');
+var os=require('os');
 
 var _env={};
 var _recursive={};
 var _sandbox=[];
+
+var _jobs={
+	max:0,
+	run:0,
+	cb:undefined,
+	begin:false,
+	list:[]
+};
+
+var _builds={
+	run:false,
+	hold:[],
+	list:[]
+};
 
 function push(){
 	var it={};
@@ -187,8 +202,9 @@ function _deps_changed(input,output){
 		var output_mtime=output;
 	else
 		var output_mtime=_mtime(output);
-	if(output_mtime<=0)
+	if(output_mtime<=0){
 		return true;
+	}
 	if(util.isArray(input)){
 		for(var i=0;i<input.length;i++){
 			if(input[i]=="") continue;
@@ -284,8 +300,9 @@ function cc(input,output){
 function ld(input,output){
 	output=_resolv(output);
 	if(util.isArray(input)){
-		if(!_deps_changed(input,output))
+		if(!_deps_changed(input,output)) {
 			return;
+		}
 		input=input.join(' ');
 	} else {
 		var temp=input.split(' ');
@@ -326,33 +343,140 @@ function include(_file){
 	eval(_code);
 }
 
-function build(_path,_file,target){
+function _build_step(){
+	if(_builds.hold && _builds.hold.length) {
+		_builds.list=_builds.hold.concat(_builds.list);
+		_builds.hold=[];
+	}
+
+	var _one=_builds.list.shift();
+	if(!_one)
+		return;
+
 	push();
-	if(_path)
-		cd(_path);
-	if(!_file)
-		_file="build.txt";
+
+	if(_one.path)
+		cd(_one.path);
+
+	var _file=_one.file?_one.file:"build.txt";
 	try{
 		var _code=fs.readFileSync(_file,{"encoding":"utf-8"});
 	} catch(e) {
 		console.error("no such file '"+e.path+"'");
 		process.exit(-1);
 	}
+	var target=_one.target;
+	_builds.run=true;
 	eval(_code);
-	pop();
+	if(_jobs.run<=0){
+		_builds.run=false;
+		pop();
+		process.nextTick(_build_step);
+	}
+}
+
+function build(_path,_file,target){
+	if(util.isArray(_path)){
+		for(var i=0;i<_path.length;i++){
+			if(path.isAbsolute(_path[i]))
+				var temp=_path[i];
+			else
+				var temp=path.join(process.cwd(),_path[i]);
+			var it={path:temp,file:_file,target:target};
+			if(_builds.run)
+				_builds.hold.push(it);
+			else
+				_builds.list.push(it);
+		}
+		return;
+	}
+	if(!_path || _path==".")
+		_path=process.cwd();
+	else if(!path.isAbsolute(_path))
+		_path=path.join(process.cwd,_path);
+	if(util.isArray(target)){
+		for(var i=0;i<target.length;i++){
+			var it={path:_path,file:_file,target:target[i]};
+			if(_builds.run)
+				_builds.hold.push(it);
+			else
+				_builds.list.push(it);
+		}
+	} else {
+		var it={path:_path,file:_file,target:target};
+		if(_builds.run)
+			_builds.hold.push(it);
+		else
+			_builds.list.push(it);
+	}
 }
 
 function shell(command){
 	return child_process.execSync(_resolv(command),{"encoding":"utf-8"}).replace(/\n$/,'');
 }
 
+function begin(){
+	_jobs.run=0;
+	_jobs.cb=undefined;
+	_jobs.begin=(_jobs.max>=1);
+	_jobs.list=[];
+}
+
+function end(cb){
+	_jobs.begin=false;
+	if(cb && _jobs.run==0) {
+		cb();
+		return;
+	}
+	if(_jobs.run>0) {
+		_jobs.cb=cb;
+	}
+}
+
+function _exec_jobs(){
+	while(_jobs.run<_jobs.max){
+		var command=_jobs.list.shift();
+		if(!command)
+			return;
+		console.log(command);
+		_jobs.run++;
+		child_process.exec(command,{"encoding":"utf-8"},function(error,stdout,stderr){
+			if(stdout && stdout.length)
+				console.log(stdout);
+			if(error) {
+				if(stderr && stderr.length)
+					console.log(stderr);
+				process.exit(-1);
+			}
+			_jobs.run--;
+			_exec_jobs();
+			if(_jobs.run==0 && _jobs.cb) {
+				var _cb=_jobs.cb;
+				_jobs.cb=undefined;
+				_cb();
+				if(_jobs.run==0) {
+					// pair with push() at build()
+					pop();
+					_builds.run=false;
+					process.nextTick(_build_step);
+				}
+			}
+		});
+	}
+}
+
 function exec(command){
 	command=_resolv(command);
-	console.log(command);
 	try{
-		var text=child_process.execSync(command,{"encoding":"utf-8"});
-		if(text && text.length>0)
-			console.log(text);
+		if(_jobs.begin){
+			_jobs.list.push(command);
+			_exec_jobs();
+		} else {
+			console.log(command);
+			var text=child_process.execSync(command,{"encoding":"utf-8"});
+			if(text && text.length>0)
+				console.log(text);
+		}
 	}catch(e){
 		process.exit(1);
 	}
@@ -377,29 +501,40 @@ function rm(file){
 	}
 }
 
-function rmdir(path){
-	if(util.isArray(path)){
-		for(var i=0;i<path.length;i++){
-			rmdir(path[i]);
+function rmdir(_path,filter){
+	if(util.isArray(_path)){
+		for(var i=0;i<_path.length;i++){
+			rmdir(_path[i],filter);
 		}
-	} else {
-		path=_resolv(path);
-		try{
-			fs.rmdirSync(path);
-			console.log("rmdir "+path);
-		} catch(e){
-		}
+		return;
 	}
+	
+	_path=_resolv(_path);
+	
+	if(filter){
+		var temp=dir(_path,filter);
+		for(var i=0;i<temp.length;i++){
+			rm(path.join(_path,temp[i]));
+		}
+		return;
+	}
+	
+	try{
+		fs.rmdirSync(path);
+		console.log("rmdir "+path);
+	} catch(e){
+	}
+
 }
 
 function dir(path,filter){
 	var temp=fs.readdirSync(path);
-	if(!filter)
+	if(!filter || filter=='*')
 		return temp;
 	if(filter=='*.c')
-		filter=/.c$/;
+		filter=/\.c$/;
 	else if(filter=='*.o')
-		filter=/.o$/;
+		filter=/\.o$/;
 	var res=[];
 	for(var i=0;i<temp.length;i++){
 		if(temp[i].match(filter)){
@@ -425,7 +560,11 @@ function wildcard(input,change){
 }
 
 function cd(path){
-	process.chdir(path);
+	try{
+		process.chdir(path);
+	} catch(e){
+		console.error("Failed change to directory '"+path+"'");
+	}
 }
 
 function _run(){
@@ -445,6 +584,21 @@ function _run(){
 			file=argv[i+1];
 			i++;
 			continue;
+		} else if(argv[i]=='-j' && i<argv.length-1) {
+			i++;
+			_jobs.max=parseInt(argv[i]);
+			if(_jobs.max<1)
+				_jobs.max=1;
+			else if(_jobs.max>os.cpus().length)
+				_jobs.max=os.cpus().length;
+			continue;
+		} else if(argv[i]=='-h') {
+			console.log("build [options] [target]");
+			console.log("\t-C path");
+			console.log("\t-j N jobs at once");
+			console.log("\t-f build.txt");
+			console.log("\t-h help");
+			process.exit(0);
 		} else if(argv[i].indexOf('=')>0) {
 			var t=argv[i].split('=',2);
 			env(t[0],'=',t[1]);
@@ -456,6 +610,7 @@ function _run(){
 	}
 	if(task==0)
 		build(path,file);
+	_build_step();
 }
 
 _run();
