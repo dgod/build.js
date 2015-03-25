@@ -293,7 +293,10 @@ function cc(input,output){
 	input=_vpath_fill(input,vpath);
 	if(!_deps_changed(input,output))
 		return;
-	var cmd=_cc+' '+$('CFLAGS')+' -c '+input+' -o '+output;
+	if(output.match(/\.o$/))
+		var cmd=_cc+' '+$('CFLAGS')+' -c '+input+' -o '+output;
+	else
+		var cmd=_cc+' '+$('CFLAGS')+" "+$('LDFLAGS')+" "+input+' -o '+output+' '+$('LIBS');
 	exec(cmd);
 }
 
