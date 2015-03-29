@@ -453,10 +453,11 @@ function _exec_jobs(){
 			}
 			_jobs.run--;
 			_exec_jobs();
-			if(_jobs.run==0 && _jobs.cb) {
+			if(_jobs.run==0) {
 				var _cb=_jobs.cb;
 				_jobs.cb=undefined;
-				_cb();
+				if(_cb)
+					_cb();
 				if(_jobs.run==0) {
 					// pair with push() at build()
 					pop();
@@ -483,10 +484,6 @@ function exec(command){
 	}catch(e){
 		process.exit(1);
 	}
-}
-
-function pkgconfig(args){
-	return shell("pkg-config "+args);
 }
 
 function rm(file){
@@ -555,7 +552,7 @@ function wildcard(input,change){
 		}
 	} else {
 		for(var i=0;i<input.length;i++){
-			if(change[0]==".c") change[0]=/.c$/;
+			if(change[0]==".c") change[0]=/\.c$/;
 			output.push(input[i].replace(change[0],change[1]));
 		}
 	}

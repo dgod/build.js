@@ -3,7 +3,7 @@ nodejs based c build system.
 example:
 
 var SRCS=dir('.','*.c');
-var OBJS=wildcard(SRCS,[/.c$/,'.o']);
+var OBJS=wildcard(SRCS,[/\.c$/,'.o']);
 var TARGET='a.out';
 
 if(target=="clean"){
