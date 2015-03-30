@@ -328,7 +328,9 @@ function cr(input,output,pattern){
 		for(var i=0;i<input.length;i++){
 			if(!_deps_changed(input[i],output[i]))
 				continue;
-			var cmd=pattern.replace('$^',input[i]).replace('$@',output[i]);
+			var cmd=pattern.replace('$^',input[i]);
+			cmd=cmd.replace('$<',output[0]);
+			cmd=cmd.replace('$@',output[i]);
 			exec(cmd);
 		}
 	} else {
@@ -336,7 +338,9 @@ function cr(input,output,pattern){
 			return;
 		if(util.isArray(input))
 			input=input.join(' ');
-		var cmd=pattern.replace('$^',input).replace('$@',output);
+		var cmd=pattern.replace('$^',input);
+		cmd=cmd.replace('$<',output[0]);
+		cmd=cmd.replace('$@',output);
 		exec(cmd);
 	}
 }
