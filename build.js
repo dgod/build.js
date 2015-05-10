@@ -351,6 +351,7 @@ function include(_file){
 }
 
 function _build_step(){
+	'use strict';
 	if(_builds.hold && _builds.hold.length) {
 		_builds.list=_builds.hold.concat(_builds.list);
 		_builds.hold=[];
