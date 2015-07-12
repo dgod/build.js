@@ -22,6 +22,17 @@ var _builds={
 	list:[]
 };
 
+var _perf={
+	begin:new Date().getTime(),
+	end:undefined,
+	stat:0,
+	read:0,
+	exists:0,
+	exec:0
+};
+
+var _fcache={};
+
 function push(){
 	var it={};
 	it.env=JSON.stringify(_env);
@@ -68,13 +79,41 @@ function _resolv(s){
 	return s;
 }
 
+function _get_cache(file){
+	var key=path.isAbsolute(file)?file:path.join(process.cwd(),file);
+	var val=_fcache[key];
+	if(!val)
+		return _fcache[key]={};
+	else
+		return val;	
+}
+
 function _mtime(file){
+	var c=_get_cache(file);
+	if("mtime" in c){
+		return c.mtime;
+	}
+	_perf.stat++;
 	try{
 		var stats=fs.statSync(file);
 	}catch(e){
 		return 0;
 	}
-	return stats.mtime.getTime();
+	return c.mtime=stats.mtime.getTime();
+}
+
+function _read(file){
+	var text=fs.readFileSync(file,{"encoding":"utf-8"});
+	_perf.read++;
+	return text;
+}
+
+function _exists(file){
+	var c=_get_cache(file);
+	if("exists" in c)
+		return c.exists;
+	_perf.exists++;
+	return c.exists=fs.existsSync(file);
 }
 
 function _get_includes(cflags){
@@ -94,13 +133,13 @@ function _deps_get(file,vpath,includes,deps,check){
 	if(check[file])
 		return;
 	check[file]=true;
-	if(file.indexOf('/')>=0 || fs.existsSync(file)) {
-		var text=fs.readFileSync(file,{"encoding":"utf-8"});
+	if(file.indexOf('/')>=0 || _exists(file)) {
+		text=_read(file);
 	} else {
 		for(var j=0;j<vpath.length;j++){
 			var path=vpath[j]+'/'+file;
-			if(fs.existsSync(path)){
-				var text=fs.readFileSync(file,{"encoding":"utf-8"});
+			if(_exists(path)){
+				text=_read(file);
 				break;
 			}
 		}
@@ -124,12 +163,12 @@ function _deps_get(file,vpath,includes,deps,check){
 		s=res[1];
 		var real;
 		if(from==0){
-			if(fs.existsSync(s)){
+			if(_exists(s)){
 				real=s;
 			} else {
 				for(var j=0;j<vpath.length;j++){
 					var path=vpath[j]+'/'+s;
-					if(fs.existsSync(path)){
+					if(_exists(path)){
 						real=path;
 						break;
 					}
@@ -139,7 +178,7 @@ function _deps_get(file,vpath,includes,deps,check){
 		if(!real){
 			for(var j=0;j<includes.length;j++){
 				var path=includes[j]+'/'+s;
-				if(fs.existsSync(path)){
+				if(_exists(path)){
 					real=path;
 					break;
 				}
@@ -161,11 +200,11 @@ function _cfile(file){
 }
 
 function _vpath_fill_single(file,vpath){
-	if(file.indexOf('/')>=0 || fs.existsSync(file))
+	if(file.indexOf('/')>=0 || _exists(file))
 		return file;
 	for(var j=0;j<vpath.length;j++){
 		var path=vpath[j]+'/'+file;
-		if(fs.existsSync(path)){
+		if(_exists(path)){
 			return path;
 		}
 	}
@@ -186,7 +225,7 @@ function _vpath_fill(input,vpath){
 		}
 		for(var j=0;j<vpath.length;j++){
 			var path=vpath[j]+'/'+file;
-			if(fs.existsSync(path)){
+			if(_exists(path)){
 				res.push(path);
 				break;
 			}
@@ -346,7 +385,7 @@ function cr(input,output,pattern){
 }
 
 function include(_file){
-	var _code=fs.readFileSync(_file,{"encoding":"utf-8"});
+	var _code=_read(_file);
 	eval(_code);
 }
 
@@ -358,8 +397,15 @@ function _build_step(){
 	}
 
 	var _one=_builds.list.shift();
-	if(!_one)
+	if(!_one) {
+		_perf.end=new Date().getTime();
+		var elapse=(_perf.end-_perf.begin)/1000;
+		if(elapse>=0.100) {
+			console.log("Build completed in "+elapse.toFixed(2)+"s");
+			//console.log(_perf);
+		}
 		return;
+	}
 
 	push();
 
@@ -368,7 +414,7 @@ function _build_step(){
 
 	var _file=_one.file?_one.file:"build.txt";
 	try{
-		var _code=fs.readFileSync(_file,{"encoding":"utf-8"});
+		var _code=_read(_file);
 	} catch(e) {
 		console.error("no such file '"+e.path+"'");
 		process.exit(-1);
@@ -420,6 +466,7 @@ function build(_path,_file,target){
 }
 
 function shell(command){
+	_perf.exec++;
 	return child_process.execSync(_resolv(command),{"encoding":"utf-8"}).replace(/\n$/,'');
 }
 
@@ -448,6 +495,7 @@ function _exec_jobs(){
 			return;
 		console.log(command);
 		_jobs.run++;
+		_perf.exec++;
 		child_process.exec(command,{"encoding":"utf-8"},function(error,stdout,stderr){
 			if(stdout && stdout.length)
 				console.log(stdout);
@@ -475,6 +523,7 @@ function _exec_jobs(){
 }
 
 function exec(command){
+	_fcache={};
 	command=_resolv(command);
 	try{
 		if(_jobs.begin){
@@ -482,6 +531,7 @@ function exec(command){
 			_exec_jobs();
 		} else {
 			console.log(command);
+			_perf.exec++;
 			var text=child_process.execSync(command,{"encoding":"utf-8"});
 			if(text && text.length>0)
 				console.log(text);
@@ -542,7 +592,12 @@ function dir(path,filter){
 		filter=/\.o$/;
 	var res=[];
 	for(var i=0;i<temp.length;i++){
-		if(temp[i].match(filter)){
+		if(typeof filter=="string") {
+			if(temp[i]==filter) {
+				res.push(temp[i]);
+				break;
+			}
+		} else if(temp[i].match(filter)){
 			res.push(temp[i]);
 		}
 	}
@@ -619,3 +674,4 @@ function _run(){
 }
 
 _run();
+
