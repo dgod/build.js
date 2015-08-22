@@ -556,6 +556,21 @@ function rm(file){
 	}
 }
 
+function mkdir(_path){
+	if(util.isArray(_path)){
+		for(var i=0;i<_path.length;i++){
+			mkdir(_path[i]);
+		}
+		return;
+	}
+	_path=_resolv(_path);
+	try{
+		fs.mkdirSync(_path);
+		console.log("mkdir "+_path);
+	}catch(e){
+	}
+}
+
 function rmdir(_path,filter){
 	if(util.isArray(_path)){
 		for(var i=0;i<_path.length;i++){
