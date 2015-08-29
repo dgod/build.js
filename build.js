@@ -667,6 +667,13 @@ function _run(){
 			else if(_jobs.max>os.cpus().length)
 				_jobs.max=os.cpus().length;
 			continue;
+		} else if(argv[i].match(/^-j\d+/)) {
+			_jobs.max=parseInt(argv[i].substring(2));
+			if(_jobs.max<1)
+				_jobs.max=1;
+			else if(_jobs.max>os.cpus().length)
+				_jobs.max=os.cpus().length;
+			continue;
 		} else if(argv[i]=='-h') {
 			console.log("build [options] [target]");
 			console.log("\t-C path");
