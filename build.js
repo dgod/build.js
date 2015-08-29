@@ -447,7 +447,7 @@ function build(_path,_file,target){
 	if(!_path || _path==".")
 		_path=process.cwd();
 	else if(!path.isAbsolute(_path))
-		_path=path.join(process.cwd,_path);
+		_path=path.join(process.cwd(),_path);
 	if(util.isArray(target)){
 		for(var i=0;i<target.length;i++){
 			var it={path:_path,file:_file,target:target[i]};
