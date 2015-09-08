@@ -532,9 +532,7 @@ function exec(command){
 		} else {
 			console.log(command);
 			_perf.exec++;
-			var text=child_process.execSync(command,{"encoding":"utf-8"});
-			if(text && text.length>0)
-				console.log(text);
+			child_process.execSync(command,{"encoding":"utf-8","stdio":"inherit"});
 		}
 	}catch(e){
 		process.exit(1);
