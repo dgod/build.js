@@ -285,13 +285,22 @@ function env(name,op,val){
 			_env[name]=val;
 		else
 			_env[name]+=' '+val;
+	} else if(op=='-=') {
+		if(!_env[name])
+			return;
+		var temp=_env[name].split(' ');
+		var i=temp.indexOf(val);
+		if(i==-1)
+			return;
+		temp.splice(i,1);
+		_env[name]=temp.join(' ');
 	} else if(!op){
 		var i=name.indexOf('=');
 		if(i<=0)
 			return;
 		val=name.substring(i+1);
 		i--;
-		if(name[i]=='?' || name[i]==':' || name[i]=='+')
+		if(name[i]=='?' || name[i]==':' || name[i]=='+'||name[i]=='-')
 			op=name.substr(i,2);
 		else{
 			op='=';
