@@ -1,5 +1,4 @@
 var fs=require('fs');
-var util=require('util');
 var child_process=require('child_process');
 var path=require('path');
 var os=require('os');
@@ -23,7 +22,7 @@ var _builds={
 };
 
 var _perf={
-	begin:new Date().getTime(),
+	begin:Date.now(),
 	end:undefined,
 	stat:0,
 	read:0,
@@ -103,7 +102,7 @@ function _mtime(file){
 }
 
 function _read(file){
-	var text=fs.readFileSync(file,{"encoding":"utf-8"});
+	var text=fs.readFileSync(file,{"encoding":"utf8"});
 	_perf.read++;
 	return text;
 }
@@ -244,7 +243,7 @@ function _deps_changed(input,output){
 	if(output_mtime<=0){
 		return true;
 	}
-	if(util.isArray(input)){
+	if(Array.isArray(input)){
 		for(var i=0;i<input.length;i++){
 			if(input[i]=="") continue;
 			var changed=_deps_changed(input[i],output_mtime);
@@ -270,7 +269,7 @@ function _deps_changed(input,output){
 }
 
 function env(name,op,val){
-	if(util.isArray(val))
+	if(Array.isArray(val))
 		val=val.join(' ');
 	if(op=='='){
 		_env[name]=val;
@@ -321,13 +320,13 @@ function $(name){
 }
 
 function cc(input,output){
-	if(util.isArray(input) && !output){
+	if(Array.isArray(input) && !output){
 		for(var i=0;i<input.length;i++){
 			cc(input[i]);
 		}
 		return;
 	}
-	if(util.isArray(input) && util.isArray(output) && input.length==output.length){
+	if(Array.isArray(input) && Array.isArray(output) && input.length==output.length){
 		for(var i=0;i<input.length;i++){
 			cc(input[i],output[i]);
 		}
@@ -350,7 +349,7 @@ function cc(input,output){
 
 function ld(input,output){
 	output=_resolv(output);
-	if(util.isArray(input)){
+	if(Array.isArray(input)){
 		if(!_deps_changed(input,output)) {
 			return;
 		}
@@ -369,8 +368,8 @@ function ld(input,output){
 function cr(input,output,pattern){
 	var vpath=$('VPATH').split(' ');
 	input=_vpath_fill(input,vpath);
-	if(util.isArray(output)) {
-		if(!util.isArray(input)) {
+	if(Array.isArray(output)) {
+		if(!Array.isArray(input)) {
 			input=[input];
 		}
 		for(var i=0;i<input.length;i++){
@@ -384,13 +383,66 @@ function cr(input,output,pattern){
 	} else {
 		if(!_deps_changed(input,output))
 			return;
-		if(util.isArray(input))
+		if(Array.isArray(input))
 			input=input.join(' ');
 		var cmd=pattern.replace('$^',input);
 		cmd=cmd.replace('$<',output[0]);
 		cmd=cmd.replace('$@',output);
 		exec(cmd);
 	}
+}
+
+function bin2c(input,output,options){
+    if(typeof(output)=='object'){
+        options=output;
+        output=null;
+    }
+    if(!output){
+        var i=input.lastIndexOf('.');
+        output=input.substr(0,i)+'.c';
+    }
+    if(!options)
+        options={static:true,zero:false};
+    if(!options.name)
+        options.name=output.replace(/\.c$/,'');
+    if(!options.line)
+        options.line=16;
+    if(!options.indent)
+        options.indent='\t';
+    try{
+        var st_input=fs.statSync(input);
+        var st_output=fs.statSync(output);
+        if(st_input.mtime.getTime()<st_output.mtime.getTime()){
+            return;
+        }
+    } catch(e){
+        if(!st_input){
+            console.error(e.message);
+            process.exit(-1);
+        }
+    }
+    console.log("bin2c "+input+" "+output);
+    var buf=fs.readFileSync(input);
+    var str=buf.toString('hex');
+    var text="";
+    if(options.static)
+        text+='static ';
+    text+='unsigned char '+options.name+'[';
+    if(options.zero)
+        text+=buf.length+1;
+    else
+        text+=buf.length;
+    text+=']={';
+    for(var i=0;i<buf.length;i++){
+         if(!(i%options.line)){
+             text+="\n"+options.indent;
+         }
+         text+='0x'+str.substr(i*2,2);
+         if(i!=buf.length-1)
+             text+=',';
+    }
+    text+="\n};\n";
+    fs.writeFileSync(output,text,{encoding:'utf8'});
 }
 
 function include(_file){
@@ -407,7 +459,7 @@ function _build_step(){
 
 	var _one=_builds.list.shift();
 	if(!_one) {
-		_perf.end=new Date().getTime();
+		_perf.end=Date.now();
 		var elapse=(_perf.end-_perf.begin)/1000;
 		if(elapse>=0.100) {
 			console.log("Build completed in "+elapse.toFixed(2)+"s");
@@ -439,7 +491,7 @@ function _build_step(){
 }
 
 function build(_path,_file,target){
-	if(util.isArray(_path)){
+	if(Array.isArray(_path)){
 		for(var i=0;i<_path.length;i++){
 			if(path.isAbsolute(_path[i]))
 				var temp=_path[i];
@@ -457,7 +509,7 @@ function build(_path,_file,target){
 		_path=process.cwd();
 	else if(!path.isAbsolute(_path))
 		_path=path.join(process.cwd(),_path);
-	if(util.isArray(target)){
+	if(Array.isArray(target)){
 		for(var i=0;i<target.length;i++){
 			var it={path:_path,file:_file,target:target[i]};
 			if(_builds.run)
@@ -476,7 +528,7 @@ function build(_path,_file,target){
 
 function shell(command){
 	_perf.exec++;
-	return child_process.execSync(_resolv(command),{"encoding":"utf-8"}).replace(/\n$/,'');
+	return child_process.execSync(_resolv(command),{"encoding":"utf8"}).replace(/\n$/,'');
 }
 
 function begin(){
@@ -505,7 +557,7 @@ function _exec_jobs(){
 		console.log(command);
 		_jobs.run++;
 		_perf.exec++;
-		child_process.exec(command,{"encoding":"utf-8"},function(error,stdout,stderr){
+		child_process.exec(command,{"encoding":"utf8"},function(error,stdout,stderr){
 			if(stdout && stdout.length)
 				console.log(stdout);
 			if(error) {
@@ -541,7 +593,7 @@ function exec(command){
 		} else {
 			console.log(command);
 			_perf.exec++;
-			child_process.execSync(command,{"encoding":"utf-8","stdio":"inherit"});
+			child_process.execSync(command,{"encoding":"utf8","stdio":"inherit"});
 		}
 	}catch(e){
 		process.exit(1);
@@ -549,7 +601,7 @@ function exec(command){
 }
 
 function rm(file){
-	if(util.isArray(file)){
+	if(Array.isArray(file)){
 		for(var i=0;i<file.length;i++){
 			rm(file[i]);
 		}
@@ -564,7 +616,7 @@ function rm(file){
 }
 
 function mkdir(_path){
-	if(util.isArray(_path)){
+	if(Array.isArray(_path)){
 		for(var i=0;i<_path.length;i++){
 			mkdir(_path[i]);
 		}
@@ -579,7 +631,7 @@ function mkdir(_path){
 }
 
 function rmdir(_path,filter){
-	if(util.isArray(_path)){
+	if(Array.isArray(_path)){
 		for(var i=0;i<_path.length;i++){
 			rmdir(_path[i],filter);
 		}
@@ -601,7 +653,6 @@ function rmdir(_path,filter){
 		console.log("rmdir "+path);
 	} catch(e){
 	}
-
 }
 
 function dir(path,filter){
