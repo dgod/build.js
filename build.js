@@ -409,6 +409,8 @@ function bin2c(input,output,options){
         options.line=16;
     if(!options.indent)
         options.indent='\t';
+	var vpath=$('VPATH').split(' ');
+	input=_vpath_fill_single(input,vpath);
     try{
         var st_input=fs.statSync(input);
         var st_output=fs.statSync(output);
