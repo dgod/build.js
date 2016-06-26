@@ -84,7 +84,7 @@ function _get_cache(file){
 	if(!val)
 		return _fcache[key]={};
 	else
-		return val;	
+		return val;
 }
 
 function _mtime(file){
@@ -240,6 +240,7 @@ function _deps_changed(input,output){
 		var output_mtime=output;
 	else
 		var output_mtime=_mtime(output);
+
 	if(output_mtime<=0){
 		return true;
 	}
@@ -262,8 +263,9 @@ function _deps_changed(input,output){
 	var check={};
 	_deps_get(input,vpath,includes,deps,check);
 	for(var i=0;i<deps.length;i++){
-		if(_mtime(deps[i])>=output_mtime)
+		if(_mtime(deps[i])>=output_mtime){
 			return true;
+		}
 	}
 	return false;
 }
@@ -336,6 +338,34 @@ function cc(input,output){
 	if(_cc.length==0) _cc='gcc';
 	if(!output)
 		output=input.replace('.c','.o');
+	var vpath=$('VPATH').split(' ');
+	input=_vpath_fill(input,vpath);
+	if(!_deps_changed(input,output))
+		return;
+	if(output.match(/\.o$/))
+		var cmd=_cc+' '+$('CFLAGS')+' -c '+input+' -o '+output;
+	else
+		var cmd=_cc+' '+$('CFLAGS')+" "+$('LDFLAGS')+" "+input+' -o '+output+' '+$('LIBS');
+	exec(cmd);
+}
+
+function cxx(input,output){
+	if(Array.isArray(input) && !output){
+		for(var i=0;i<input.length;i++){
+			cxx(input[i]);
+		}
+		return;
+	}
+	if(Array.isArray(input) && Array.isArray(output) && input.length==output.length){
+		for(var i=0;i<input.length;i++){
+			cxx(input[i],output[i]);
+		}
+		return;
+	}
+	var _cc=$('CXX');
+	if(_cc.length==0) _cc='g++';
+	if(!output)
+		output=input.replace('.cpp','.o');
 	var vpath=$('VPATH').split(' ');
 	input=_vpath_fill(input,vpath);
 	if(!_deps_changed(input,output))
@@ -448,8 +478,14 @@ function bin2c(input,output,options){
 }
 
 function include(_file){
+	var _old=_env["BUILD_FILE"];
+	_env["BUILD_FILE"]=path.resolve(_file);
 	var _code=_read(_file);
 	eval(_code);
+	if(_old)
+		_env["BUILD_FILE"]=_old;
+	else
+		delete _env["BUILD_FILE"];
 }
 
 function _build_step(){
@@ -484,7 +520,18 @@ function _build_step(){
 	}
 	var target=_one.target;
 	_builds.run=true;
+
+	var _old=_env["BUILD_FILE"];
+	_env["BUILD_FILE"]=path.resolve(_file);
+	var _code=_read(_file);
+
 	eval(_code);
+
+	if(_old)
+		_env["BUILD_FILE"]=_old;
+	else
+		delete _env["BUILD_FILE"];
+
 	if(_jobs.run<=0){
 		_builds.run=false;
 		pop();
@@ -665,6 +712,8 @@ function dir(path,filter){
 		filter=/\.c$/;
 	else if(filter=='*.o')
 		filter=/\.o$/;
+	else if(filter.substr(0,2)=='*.')
+		filter=new RegExp('\\.'+filter.substr(2)+'$');
 	var res=[];
 	for(var i=0;i<temp.length;i++){
 		if(typeof filter=="string") {
