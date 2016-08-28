@@ -706,8 +706,9 @@ function rmdir(_path,filter){
 
 function dir(path,filter){
 	var temp=fs.readdirSync(path);
-	if(!filter || filter=='*')
+	if(!filter || filter=='*') {
 		return temp;
+	}
 	if(filter=='*.c')
 		filter=/\.c$/;
 	else if(filter=='*.o')
@@ -716,7 +717,7 @@ function dir(path,filter){
 		filter=new RegExp('\\.'+filter.substr(2)+'$');
 	var res=[];
 	for(var i=0;i<temp.length;i++){
-		if(typeof filter=="string") {
+		if(typeof filter=="string"){
 			if(temp[i]==filter) {
 				res.push(temp[i]);
 				break;
@@ -743,11 +744,12 @@ function wildcard(input,change){
 	return output;
 }
 
-function cd(path){
+function cd(dir){
 	try{
-		process.chdir(path);
+		process.chdir(dir);
 	} catch(e){
-		console.error("Failed change to directory '"+path+"'");
+		console.error("Failed change to directory '"+path.resolve(dir)+"'");
+		process.exit(-1);
 	}
 }
 
