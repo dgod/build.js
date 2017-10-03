@@ -713,7 +713,7 @@ function dir(path,filter){
 		filter=/\.c$/;
 	else if(filter=='*.o')
 		filter=/\.o$/;
-	else if(filter.substr(0,2)=='*.')
+	else if(typeof filter=="string" && filter.substr(0,2)=='*.')
 		filter=new RegExp('\\.'+filter.substr(2)+'$');
 	var res=[];
 	for(var i=0;i<temp.length;i++){
