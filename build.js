@@ -645,6 +645,7 @@ function exec(command){
 			child_process.execSync(command,{"encoding":"utf8","stdio":"inherit"});
 		}
 	}catch(e){
+		print(e);
 		process.exit(1);
 	}
 }
