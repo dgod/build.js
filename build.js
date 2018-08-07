@@ -342,6 +342,13 @@ function cc(input,output){
 	input=_vpath_fill(input,vpath);
 	if(!_deps_changed(input,output))
 		return;
+
+	// Create folder if not exist
+	var dir = path.parse(output).dir;
+	if (!fs.existsSync(dir)) {
+		fs.mkdirSync(dir);
+	}
+
 	if(output.match(/\.o$/))
 		var cmd=_cc+' '+$('CFLAGS')+' -c '+input+' -o '+output;
 	else
