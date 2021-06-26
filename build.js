@@ -525,7 +525,8 @@ function _build_step(){
 	_env["BUILD_FILE"]=path.resolve(_file);
 	var _code=_read(_file);
 
-	eval(_code);
+	var r=eval(_code);
+	
 
 	if(_old)
 		_env["BUILD_FILE"]=_old;
@@ -533,9 +534,17 @@ function _build_step(){
 		delete _env["BUILD_FILE"];
 
 	if(_jobs.run<=0){
-		_builds.run=false;
-		pop();
-		process.nextTick(_build_step);
+		if(r && typeof(r)=='object' && r.constructor==Promise){
+			r.then(function(){
+				_builds.run=false;
+				pop();
+				process.nextTick(_build_step);
+			});
+		}else{
+			_builds.run=false;
+			pop();
+			process.nextTick(_build_step);
+		}
 	}
 }
 
@@ -588,6 +597,9 @@ function begin(){
 }
 
 function end(cb){
+	if(!cb){
+		return new Promise(end);
+	}
 	_jobs.begin=false;
 	if(cb && _jobs.run==0) {
 		cb();
