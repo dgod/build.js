@@ -334,8 +334,7 @@ function cc(input,output){
 		}
 		return;
 	}
-	var _cc=$('CC');
-	if(_cc.length==0) _cc='gcc';
+	var _cc=$('CC') || process.env.CC || 'gcc';
 	if(!output)
 		output=input.replace('.c','.o');
 	var vpath=$('VPATH').split(' ');
@@ -362,8 +361,7 @@ function cxx(input,output){
 		}
 		return;
 	}
-	var _cc=$('CXX');
-	if(_cc.length==0) _cc='g++';
+	var _cc=$('CXX') || process.env.CXX || 'g++';
 	if(!output)
 		output=input.replace('.cpp','.o');
 	var vpath=$('VPATH').split(' ');
@@ -389,9 +387,8 @@ function ld(input,output){
 		if(!_deps_changed(temp,output))
 			return;
 	}
-	var cc=$('CC');
-	if(cc.length==0) cc='gcc';
-	var cmd=cc+' '+$('CFLAGS')+' '+$('LDFLAGS')+' '+input+' '+' -o '+output+' '+$('LIBS');
+	var _cc=$('CC') || process.env.CC || 'gcc';
+	var cmd=_cc+' '+$('CFLAGS')+' '+$('LDFLAGS')+' '+input+' '+' -o '+output+' '+$('LIBS');
 	exec(cmd);
 }
 
