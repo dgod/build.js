@@ -654,7 +654,7 @@ function exec(command){
 			child_process.execSync(command,{"encoding":"utf8","stdio":"inherit"});
 		}
 	}catch(e){
-		console.log(e);
+		//console.log(e);
 		process.exit(1);
 	}
 }
