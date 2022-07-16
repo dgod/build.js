@@ -32,6 +32,8 @@ var _perf={
 
 var _fcache={};
 
+var _excludes=new Set();
+
 function push(){
 	var it={};
 	it.env=JSON.stringify(_env);
@@ -566,6 +568,8 @@ function build(_path,_file,target){
 		_path=path.join(process.cwd(),_path);
 	if(Array.isArray(target)){
 		for(var i=0;i<target.length;i++){
+			if(_excludes.has(target[i]))
+				continue;
 			var it={path:_path,file:_file,target:target[i]};
 			if(_builds.run)
 				_builds.hold.push(it);
@@ -573,6 +577,8 @@ function build(_path,_file,target){
 				_builds.list.push(it);
 		}
 	} else {
+		if(_excludes.has(target))
+			return;
 		var it={path:_path,file:_file,target:target};
 		if(_builds.run)
 			_builds.hold.push(it);
@@ -795,11 +801,15 @@ function _run(){
 			else if(_jobs.max>os.cpus().length)
 				_jobs.max=os.cpus().length;
 			continue;
+		} else if(argv[i]=='-x' && i<argv.length-1) {
+			i++;
+			_excludes.add(argv[i]);
 		} else if(argv[i]=='-h') {
 			console.log("build [options] [target]");
 			console.log("\t-C path");
 			console.log("\t-j N jobs at once");
 			console.log("\t-f build.txt");
+			console.log("\t-x excludes target");
 			console.log("\t-h help");
 			process.exit(0);
 		} else if(argv[i].indexOf('=')>0) {
