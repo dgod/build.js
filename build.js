@@ -1,3 +1,5 @@
+'use strict';
+
 var fs=require('fs');
 var child_process=require('child_process');
 var path=require('path');
@@ -134,6 +136,7 @@ function _deps_get(file,vpath,includes,deps,check){
 	if(check[file])
 		return;
 	check[file]=true;
+	var text;
 	if(file.indexOf('/')>=0 || _exists(file)) {
 		text=_read(file);
 	} else {
@@ -495,7 +498,6 @@ function include(_file){
 }
 
 function _build_step(){
-	'use strict';
 	if(_builds.hold && _builds.hold.length) {
 		_builds.list=_builds.hold.concat(_builds.list);
 		_builds.hold=[];
