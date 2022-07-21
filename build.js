@@ -346,8 +346,8 @@ function cc(input,output){
 
 	// Create folder if not exist
 	var dir = path.parse(output).dir;
-	if (!fs.existsSync(dir)) {
-		fs.mkdirSync(dir);
+	if (dir && !fs.existsSync(dir)) {
+		fs.mkdirSync(dir,{recursive:true});
 	}
 
 	if(output.match(/\.o$/))
