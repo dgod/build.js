@@ -778,6 +778,41 @@ function cd(dir){
 	}
 }
 
+function basename(name,suffix){
+	var temp;
+	if(typeof(suffix)=='string')
+		return path.basename(name,suffix);
+	temp=path.basename(name);
+	if(!suffix)
+		return temp;
+	var end=temp.lastIndexOf('.');
+	if(end<=0)
+		return temp;
+	return temp.substring(0,end);         
+}
+
+function cp(src,dest,options){
+	src=_resolv(src);
+	dest=_resolv(dest);
+	console.log(`cp ${src} ${dest}`);
+	options=options || {};
+	if(!fs.existsSync(src))
+		return;
+	var st=fs.statSync(src);
+	if(dest[dest.length-1]=='/')
+		dest+=basename(src);
+	if(st.isDirectory()){
+		fs.cpSync(src,dest,{recursive:true});
+	}else{
+		if(fs.existsSync(dest)){
+			st=fs.statSync(dest);
+			if(st.isDirectory())
+				dest+='/'+basename(src);
+		}
+		fs.copyFileSync(src,dest);
+	}
+}
+
 function _run(){
 	var argv=process.argv;
 	var i=1;
