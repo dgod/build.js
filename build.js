@@ -468,6 +468,8 @@ function bin2c(input,output,options){
     var text="";
     if(options.static)
         text+='static ';
+	if(options.readonly)
+		text+='const ';
     text+='unsigned char '+options.name+'[';
     if(options.zero)
         text+=buf.length+1;
