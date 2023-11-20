@@ -677,6 +677,8 @@ function exec(command){
 }
 
 function rm(file){
+	if(file.startsWith('*.'))
+		return rmdir('.',file);
 	if(Array.isArray(file)){
 		for(var i=0;i<file.length;i++){
 			rm(file[i]);
