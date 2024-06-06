@@ -1,3 +1,5 @@
+#!/usr/bin/node
+
 'use strict';
 
 var fs=require('fs');
@@ -352,7 +354,8 @@ function cc(input,output){
 	if (dir && !fs.existsSync(dir)) {
 		fs.mkdirSync(dir,{recursive:true});
 	}
-
+	if(Array.isArray(input))
+		input=input.join(' ');
 	if(output.match(/\.o$/))
 		var cmd=_cc+' '+$('CFLAGS')+' -c '+input+' -o '+output;
 	else
