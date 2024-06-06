@@ -820,6 +820,18 @@ function cp(src,dest,options){
 	}
 }
 
+class CleanTarget{
+	constructor(targets){
+		if(!targets || !targets.length)
+			this.targets=null;
+		else
+			this.targets=targets;
+	}
+	valueOf(){
+		return "clean";
+	}
+}
+
 function _run(){
 	var argv=process.argv;
 	var i=1;
@@ -868,9 +880,16 @@ function _run(){
 			env(t[0],'=',t[1]);
 			continue;
 		}
-		build(path,file,argv[i]);
-		file=undefined;
-		task++;
+		if(argv[i]=='clean'){
+			build(path,file,new CleanTarget(argv.slice(i+1)));
+			file=undefined;
+			task++;
+			break;
+		}else{
+			build(path,file,argv[i]);
+			file=undefined;
+			task++;
+		}
 	}
 	if(task==0)
 		build(path,file);
