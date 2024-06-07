@@ -328,6 +328,10 @@ function $(name){
 	return res;
 }
 
+function exit(code){
+	process.exit(code);
+}
+
 function cc(input,output){
 	if(Array.isArray(input) && !output){
 		for(var i=0;i<input.length;i++){
