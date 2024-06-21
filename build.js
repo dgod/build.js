@@ -388,7 +388,7 @@ function cxx(input,output){
 	if(!_deps_changed(input,output))
 		return;
 	if(output.match(/\.o$/))
-		var cmd=_cc+' '+$('CFLAGS')+' -c '+input+' -o '+output;
+		var cmd=_cc+' '+$('CFLAGS')+' '+$('CPPFLAGS')+' -c '+input+' -o '+output;
 	else
 		var cmd=_cc+' '+$('CFLAGS')+" "+$('LDFLAGS')+" "+input+' -o '+output+' '+$('LIBS');
 	exec(cmd);
@@ -406,7 +406,7 @@ function ld(input,output){
 		if(!_deps_changed(temp,output))
 			return;
 	}
-	var _cc=$('CC') || process.env.CC || 'gcc';
+	var _cc=$('LD') || $('CC') || process.env.CC || 'gcc';
 	var cmd=_cc+' '+$('CFLAGS')+' '+$('LDFLAGS')+' '+input+' '+' -o '+output+' '+$('LIBS');
 	exec(cmd);
 }
