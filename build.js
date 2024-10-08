@@ -328,6 +328,22 @@ function $(name){
 	return res;
 }
 
+function which(name){
+	if(process.platform=='win32' && !name.endsWith('.exe'))
+		name+='.exe';
+	if(fs.existsSync(name))
+		return path.resolve(name);
+	if(name.includes('/'))
+		return null;
+	let arr=process.platform=='win32'?process.env.PATH.split(';'):process.env.PATH.split(':');
+	for(let one of arr){
+		let temp=path.resolve(one,name);
+		if(fs.existsSync(temp))
+			return temp;
+	}
+	return null;
+}
+
 function exit(code){
 	process.exit(code);
 }
