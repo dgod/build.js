@@ -455,60 +455,62 @@ function cr(input,output,pattern){
 }
 
 function bin2c(input,output,options){
-    if(typeof(output)=='object'){
-        options=output;
-        output=null;
-    }
-    if(!output){
-        var i=input.lastIndexOf('.');
-        output=input.substr(0,i)+'.c';
-    }
-    if(!options)
-        options={static:true,zero:false};
-    if(!options.name)
-        options.name=output.replace(/\.c$/,'');
-    if(!options.line)
-        options.line=16;
-    if(!options.indent)
-        options.indent='\t';
+	if(typeof(output)=='object'){
+		options=output;
+		output=null;
+	}
+	if(!output){
+		var i=input.lastIndexOf('.');
+		output=input.substr(0,i)+'.c';
+	}
+	if(!options)
+		options={static:true,zero:false};
+	if(!options.name)
+		options.name=output.replace(/\.c$/,'');
+	if(!options.line)
+		options.line=16;
+	if(!options.indent)
+		options.indent='\t';
 	var vpath=$('VPATH').split(' ');
 	input=_vpath_fill_single(input,vpath);
-    try{
-        var st_input=fs.statSync(input);
-        var st_output=fs.statSync(output);
-        if(st_input.mtime.getTime()<st_output.mtime.getTime()){
-            return;
-        }
-    } catch(e){
-        if(!st_input){
-            console.error(e.message);
-            process.exit(-1);
-        }
-    }
-    console.log("bin2c "+input+" "+output);
-    var buf=fs.readFileSync(input);
-    var str=buf.toString('hex');
-    var text="";
-    if(options.static)
-        text+='static ';
+	try{
+		var st_input=fs.statSync(input);
+		var st_output=fs.statSync(output);
+		if(st_input.mtime.getTime()<st_output.mtime.getTime()){
+			return;
+		}
+	} catch(e){
+		if(!st_input){
+			console.error(e.message);
+			process.exit(-1);
+		}
+	}
+	console.log("bin2c "+input+" "+output);
+	var buf=fs.readFileSync(input);
+	if(options.transform)
+		buf=options.transform(buf);
+	var str=buf.toString('hex');
+	var text="";
+	if(options.static)
+		text+='static ';
 	if(options.readonly)
 		text+='const ';
-    text+='unsigned char '+options.name+'[';
-    if(options.zero)
-        text+=buf.length+1;
-    else
-        text+=buf.length;
-    text+=']={';
-    for(var i=0;i<buf.length;i++){
-         if(!(i%options.line)){
-             text+="\n"+options.indent;
-         }
-         text+='0x'+str.substr(i*2,2);
-         if(i!=buf.length-1)
-             text+=',';
-    }
-    text+="\n};\n";
-    fs.writeFileSync(output,text,{encoding:'utf8'});
+	text+='unsigned char '+options.name+'[';
+	if(options.zero)
+		text+=buf.length+1;
+	else
+		text+=buf.length;
+	text+=']={';
+	for(var i=0;i<buf.length;i++){
+		 if(!(i%options.line)){
+			 text+="\n"+options.indent;
+		 }
+		 text+='0x'+str.substr(i*2,2);
+		 if(i!=buf.length-1)
+			 text+=',';
+	}
+	text+="\n};\n";
+	fs.writeFileSync(output,text,{encoding:'utf8'});
 }
 
 function include(_file){
@@ -815,7 +817,7 @@ function basename(name,suffix){
 	var end=temp.lastIndexOf('.');
 	if(end<=0)
 		return temp;
-	return temp.substring(0,end);         
+	return temp.substring(0,end);		 
 }
 
 function cp(src,dest,options){
