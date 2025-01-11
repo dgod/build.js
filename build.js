@@ -102,6 +102,7 @@ function _mtime(file){
 	try{
 		var stats=fs.statSync(file);
 	}catch(e){
+		c.mtime=0;
 		return 0;
 	}
 	return c.mtime=stats.mtime.getTime();
@@ -363,12 +364,11 @@ function cc(input,output){
 	}
 	var _cc=$('CC') || process.env.CC || 'gcc';
 	if(!output)
-		output=input.replace('.c','.o');
+		output=input.replace(/\.c$/,'.o');
 	var vpath=$('VPATH').split(' ');
 	input=_vpath_fill(input,vpath);
 	if(!_deps_changed(input,output))
 		return;
-
 	// Create folder if not exist
 	var dir = path.parse(output).dir;
 	if (dir && !fs.existsSync(dir)) {
