@@ -34,6 +34,41 @@ var _perf={
 	exec:0
 };
 
+var _feat={
+	_includes:new Set(),
+	_excludes:new Set(),
+	_add(s,p){
+		if(typeof(p)=='string')
+			p=p.split(',');
+		for(let i=0;i<p.length;i++)
+			s.add(p[i]);
+	},
+	_del(s,p){
+		if(typeof(p)=='string')
+			p=p.split(',');
+		for(let i=0;i<p.length;i++)
+			s.delete(p[i]);
+	},
+	include(p,force=true){
+		if(force)
+			this._del(this._excludes,p);
+		this._add(this._includes,p);
+	},
+	exclude(p){
+		this._add(this._excludes,p);
+	}
+};
+
+function feature(p){
+	_feat.include(p,false);
+}
+
+function support(n){
+	if(_feat._excludes.has(n))
+		return false;
+	return _feat._includes.has(n);
+}
+
 var _fcache={};
 
 var _excludes=new Set();
@@ -889,12 +924,21 @@ function _run(){
 		} else if(argv[i]=='-x' && i<argv.length-1) {
 			i++;
 			_excludes.add(argv[i]);
+			continue;
+		} else if(argv[i].startsWith('--with=')) {
+			_feat.include(argv[i].substring(7));
+			continue;
+		} else if(argv[i].startsWith('--without=')) {
+			_feat.exclude(argv[i].substring(10));
+			continue;
 		} else if(argv[i]=='-h') {
 			console.log("build [options] [target]");
 			console.log("\t-C path");
 			console.log("\t-j N jobs at once");
 			console.log("\t-f build.txt");
 			console.log("\t-x excludes target");
+			console.log("\t--with=feat,...");
+			console.log("\t--without=feat,...");
 			console.log("\t-h help");
 			process.exit(0);
 		} else if(argv[i].indexOf('=')>0) {
