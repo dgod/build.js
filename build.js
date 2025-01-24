@@ -866,7 +866,10 @@ function cp(src,dest,options){
 	if(dest[dest.length-1]=='/')
 		dest+=basename(src);
 	if(st.isDirectory()){
-		fs.cpSync(src,dest,{recursive:true});
+		if(fs.cpSync)
+			fs.cpSync(src,dest,{recursive:true});
+		else
+			exec(`cp -rT ${src} ${dest}`);
 	}else{
 		if(fs.existsSync(dest)){
 			st=fs.statSync(dest);
