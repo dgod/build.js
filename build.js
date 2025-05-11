@@ -779,6 +779,8 @@ function rmdir(_path,filter){
 	_path=_resolv(_path);
 	
 	if(filter){
+		if(!fs.existsSync(_path))
+			return;
 		var temp=dir(_path,filter);
 		for(var i=0;i<temp.length;i++){
 			rm(path.join(_path,temp[i]));
