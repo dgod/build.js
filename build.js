@@ -789,8 +789,8 @@ function rmdir(_path,filter){
 	}
 	
 	try{
-		fs.rmdirSync(path);
-		console.log("rmdir "+path);
+		fs.rmdirSync(_path);
+		console.log("rmdir "+_path);
 	} catch(e){
 	}
 }
