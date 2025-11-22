@@ -9,10 +9,10 @@ const os=require('os');
 const vm=require('vm');
 
 var _env={};
-var _recursive={};
-var _sandbox=[];
+const _recursive={};
+const _sandbox=[];
 
-var _jobs={
+const _jobs={
 	max:0,
 	run:0,
 	cb:undefined,
@@ -20,13 +20,13 @@ var _jobs={
 	list:[]
 };
 
-var _builds={
+const _builds={
 	run:false,
 	hold:[],
 	list:[]
 };
 
-var _perf={
+const _perf={
 	begin:Date.now(),
 	end:undefined,
 	stat:0,
@@ -35,7 +35,7 @@ var _perf={
 	exec:0
 };
 
-var _feat={
+const _feat={
 	_includes:new Set(),
 	_excludes:new Set(),
 	_add(s,p){
@@ -72,7 +72,7 @@ function support(n){
 
 var _fcache={};
 
-var _excludes=new Set();
+const _excludes=new Set();
 
 function push(){
 	var it={};
@@ -978,32 +978,19 @@ function _run(){
 
 
 const _build_context={
-	env,
-	$,
-	path,
-	process,
-	os,
-	fs,
+	path,process,os,fs,
+	env,$,
 	build,
 	dir,
 	wildcard,
 	include,
-	begin,
-	end,
-	push,
-	pop,
-	cd,
-	cc,
-	cxx,
-	ld,	
-	cr,
-	exec,
-	mkdir,
-	rmdir,
-	cp,
-	shell,
-	feature,
-	support,
+	begin,end,
+	push,pop,
+	bin2c,
+	cc,cxx,ld,cr,
+	exec,shell,
+	cd,mkdir,rmdir,cp,
+	feature,support,
 	_exists,
 };
 
