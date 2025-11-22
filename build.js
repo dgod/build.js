@@ -2,10 +2,11 @@
 
 'use strict';
 
-var fs=require('fs');
-var child_process=require('child_process');
-var path=require('path');
-var os=require('os');
+const fs=require('fs');
+const child_process=require('child_process');
+const path=require('path');
+const os=require('os');
+const vm=require('vm');
 
 var _env={};
 var _recursive={};
@@ -552,7 +553,11 @@ function include(_file){
 	var _old=_env["BUILD_FILE"];
 	_env["BUILD_FILE"]=path.resolve(_file);
 	var _code=_read(_file);
-	eval(_code);
+	var code=new vm.Script(_code,{filename:_env["BUILD_FILE"]})
+	var context=Object.assign({},_build_context);
+	vm.createContext(context);
+	code.runInContext(context);
+	// eval(_code);
 	if(_old)
 		_env["BUILD_FILE"]=_old;
 	else
@@ -595,8 +600,12 @@ function _build_step(){
 	_env["BUILD_FILE"]=path.resolve(_file);
 	var _code=_read(_file);
 
-	var r=eval(_code);
-	
+	var _code=_read(_file);
+	var code=new vm.Script(_code,{filename:_env["BUILD_FILE"]})
+	var context=Object.assign({target},_build_context);
+	vm.createContext(context);
+	var r=code.runInContext(context);
+	// var r=eval(_code);	
 
 	if(_old)
 		_env["BUILD_FILE"]=_old;
@@ -966,6 +975,37 @@ function _run(){
 		build(path,file);
 	_build_step();
 }
+
+
+const _build_context={
+	env,
+	$,
+	path,
+	process,
+	os,
+	fs,
+	build,
+	dir,
+	wildcard,
+	include,
+	begin,
+	end,
+	push,
+	pop,
+	cd,
+	cc,
+	cxx,
+	ld,	
+	cr,
+	exec,
+	mkdir,
+	rmdir,
+	cp,
+	shell,
+	feature,
+	support,
+	_exists,
+};
 
 _run();
 
