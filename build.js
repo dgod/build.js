@@ -978,20 +978,20 @@ function _run(){
 
 
 const _build_context={
-	path,process,os,fs,
+	require,path,process,os,fs,
 	env,$,
-	build,
-	dir,
-	wildcard,
+	dir,wildcard,basename,which,
 	include,
+	build,
 	begin,end,
 	push,pop,
 	bin2c,
 	cc,cxx,ld,cr,
 	exec,shell,
-	cd,mkdir,rmdir,cp,
+	cd,cp,rm,mkdir,rmdir,
 	feature,support,
 	_exists,
+	rm,
 };
 
 _run();
