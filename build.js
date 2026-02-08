@@ -991,7 +991,6 @@ const _build_context={
 	cd,cp,rm,mkdir,rmdir,
 	feature,support,
 	_exists,
-	rm,
 };
 
 _run();
