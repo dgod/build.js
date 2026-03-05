@@ -978,7 +978,7 @@ function _run(){
 
 
 const _build_context={
-	require,path,process,os,fs,
+	require,path,process,os,fs,Buffer,
 	env,$,
 	dir,wildcard,basename,which,
 	include,
