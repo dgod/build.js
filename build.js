@@ -7,6 +7,7 @@ const child_process=require('child_process');
 const path=require('path');
 const os=require('os');
 const vm=require('vm');
+const zlib=require('zlib');
 
 var _env={};
 const _recursive={};
@@ -939,11 +940,13 @@ function _run(){
 			i++;
 			_excludes.add(argv[i]);
 			continue;
-		} else if(argv[i].startsWith('--with=')) {
-			_feat.include(argv[i].substring(7));
+		} else if(argv[i]=='--with' && i<argv.length-1) {
+			i++;
+			_feat.include(argv[i]);
 			continue;
-		} else if(argv[i].startsWith('--without=')) {
-			_feat.exclude(argv[i].substring(10));
+		} else if(argv[i]=='--without' && i<argv.length-1) {
+			i++;
+			_feat.exclude(argv[i]);
 			continue;
 		} else if(argv[i]=='-h') {
 			console.log("build [options] [target]");
@@ -951,8 +954,8 @@ function _run(){
 			console.log("\t-j N jobs at once");
 			console.log("\t-f build.txt");
 			console.log("\t-x excludes target");
-			console.log("\t--with=feat,...");
-			console.log("\t--without=feat,...");
+			console.log("\t--with feat,...");
+			console.log("\t--without feat,...");
 			console.log("\t-h help");
 			process.exit(0);
 		} else if(argv[i].indexOf('=')>0) {
@@ -978,7 +981,7 @@ function _run(){
 
 
 const _build_context={
-	require,path,process,os,fs,Buffer,
+	require,path,process,os,fs,Buffer,zlib,
 	env,$,
 	dir,wildcard,basename,which,
 	include,
