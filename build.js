@@ -27,6 +27,9 @@ const _builds={
 	list:[]
 };
 
+const _recursion={
+};
+
 const _perf={
 	begin:Date.now(),
 	end:undefined,
@@ -598,15 +601,24 @@ function _build_step(){
 	_builds.run=true;
 
 	var _old=_env["BUILD_FILE"];
-	_env["BUILD_FILE"]=path.resolve(_file);
-	var _code=_read(_file);
-
+	var _build_file=path.resolve(_file);
+	_env["BUILD_FILE"]=_build_file;
+	var _recur_key=`${_build_file} ${target}`;
+	if(_recursion[_recur_key]===undefined){
+		_recursion[_recur_key]=0;
+	}else{
+		_recursion[_recur_key]++;
+	}
+	var recursion=_recursion[_recur_key];
+	if(recursion>1){
+		console.log(`Build ${_recur_key} too many times`);
+		process.exit(-1);
+	}
 	var _code=_read(_file);
 	var code=new vm.Script(_code,{filename:_env["BUILD_FILE"]})
-	var context=Object.assign({target},_build_context);
+	var context=Object.assign({target,recursive:recursion>0},_build_context);
 	vm.createContext(context);
 	var r=code.runInContext(context);
-	// var r=eval(_code);	
 
 	if(_old)
 		_env["BUILD_FILE"]=_old;
@@ -847,6 +859,7 @@ function wildcard(input,change){
 
 function cd(dir){
 	try{
+		dir=_resolv(dir);
 		process.chdir(dir);
 	} catch(e){
 		console.error("Failed change to directory '"+path.resolve(dir)+"'");
