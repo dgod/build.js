@@ -994,7 +994,7 @@ function _run(){
 
 
 const _build_context={
-	require,path,process,os,fs,Buffer,zlib,
+	console,require,path,process,os,fs,Buffer,zlib,
 	env,$,
 	dir,wildcard,basename,which,
 	include,
