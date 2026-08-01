@@ -162,6 +162,10 @@ function _exists(file){
 	return c.exists=fs.existsSync(file);
 }
 
+function exists(file){
+	return _exists(_resolv(file));
+}
+
 function _get_includes(cflags){
 	var res=[];
 	if(!cflags)
@@ -1006,7 +1010,7 @@ const _build_context={
 	exec,shell,
 	cd,cp,rm,mkdir,rmdir,
 	feature,support,
-	_exists,
+	exists,_exists,
 };
 
 _run();
